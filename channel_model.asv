@@ -6,7 +6,7 @@ snr_dB=0:1:8;
 snr_linear = 10.^(snr_dB/10);
 a = zeros(1,Na);
 msg = (-1+2*randi([0,1],1,Na));
-beta = 0.3; %%rolloff factor
+beta = 0.25; %%rolloff factor
 tau = 0.8;
 span = 20; %%sps * Span must be even
 sps = 100; %%Samples per symbol, Modulation scheme value
@@ -69,12 +69,9 @@ for i = 1 : length(snr_linear)
     fprintf("Received message is %s at SNR %s dB\n",sprintf('%d ',a_hat),sprintf('%d',snr_dB(i)));
 end
 figure(1)
-semilogy(snr_dB,BER_AWGN,'k');
-hold on
-semilogy(snr_dB,BER_FTN,'r');
+semilogy(snr_dB,BER_AWGN,'');
 grid on
-hold off
-legend('Zero ISI - τ = 1','Proposed PDA');
+title('')
 return
 an = 1*(-1+2*randi([0,1],1,Na))
 x = G*an' + Noise;
