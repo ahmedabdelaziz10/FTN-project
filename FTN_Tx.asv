@@ -1,0 +1,82 @@
+Na = 1000; % Message word length (in bits) %
+fc = 1000;
+Eb  = 1;
+SNRdb = 0:1:10;
+N0 = Eb * 10.^(-SNRdb/10);
+nErrs = zeros(1,length(SNRdb));
+sum_Errs = zeros(1,length(SNRdb));
+avg_error = zeros(1,length(SNRdb));
+% Data Source
+%
+for i = 1:20
+    a = randi([0,1],1,Na);
+    
+
+%a = [0 1 1 0 1 0 0 1 1 1];
+    %fprintf('Transmitted Message: %s\n', sprintf('%d ', a)); %
+    % Symbol Mapper
+    %
+    vn = a;
+    idx = vn == 1;
+    vn(idx) = 1;
+    idx = find(vn == 0);
+    vn(idx) = -1;
+    %% Transmit filter
+    eta = 100;
+    T = 0.01;
+    beta = 0.3; %%rolloff factor
+    tau = 0.8;
+    span = 20; %%sps * Span must be even
+    Ts = T/eta;
+    
+    %%sps = 100; %%Samples per symbol, Modulation scheme value
+    hT = rcosdesign(beta,span,eta,'normal');
+    t = - (span/2)*T:T/eta: (Na-1)*tau*T + (span/2)*T - T/eta;
+    vt = conv(upsample(vn,eta*tau),hT);
+    %figure(1)
+    vt = vt(1:end-eta*tau);
+    %plot(t,vt);
+    %% modulator
+    vct = vt * sqrt(2) .* cos(2*pi*fc*t);
+    %% channel
+    %%change to rayleigh fading channel 
+    for j = 1:length(N0)
+        rct = vct + sqrt(1/Ts * N0(j)/2) * randn(1, length(vct));
+        wct = sqrt(1/Ts * N0(j)/2) * randn(1, length(vct));
+        %% demodulator 
+        ro = rct * sqrt(2) .* cos(2*pi*fc*t);
+        %disp(SNRdb(j));
+        %disp(ro);
+        %% Baseband channel
+        %%Detector
+        hR = fliplr(hT);
+        %%ro = vn;
+        rt = conv(ro,hR); 
+        %plot(rt);
+        %figure(2)
+        rt = rt(1:end-eta+1);
+        %plot(rt);
+        rn = rt(span*eta:tau*eta:eta*span + (Na-1)*eta*tau);
+        ah = rn;
+        ah(ah >= 0) = 1;
+        ah(ah < 0) = 0;
+        nErrs(j) = sum(xor(a,ah));
+        % Data Sink
+        %
+        %fprintf('Received Message: %s\n', sprintf('%d', ah));
+        %fprintf('Number of errors: %d at %d dB\n', nErrs, SNRdb(j));
+        %disp(nErrs);
+
+    end
+    sum_Errs = sum_Errs + nErrs;
+    
+    
+end
+avg_error = sum_Errs / 20;
+avg_error = avg_error/Na;
+figure(1)
+semilogy(SNRdb, avg_error);
+grid on
+hold off
+%disp(avg_error);
+return

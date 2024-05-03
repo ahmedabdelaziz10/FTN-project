@@ -6,7 +6,8 @@ snr_dB=0:1:8;
 snr_linear = 10.^(snr_dB/10);
 a = zeros(1,Na);
 msg = (-1+2*randi([0,1],1,Na));
-beta = 0.25; %%rolloff factor
+nErrs = zeros(1,length())
+beta = 0.3; %%rolloff factor
 tau = 0.8;
 span = 20; %%sps * Span must be even
 sps = 100; %%Samples per symbol, Modulation scheme value
@@ -64,58 +65,21 @@ for i = 1 : length(snr_linear)
         end
     end
     a_hat =sign(-0.5+Pa);
+
     BER_AWGN(i) = qfunc(sqrt(2*snr_linear(i)));
     BER_FTN(i) = qfunc(sqrt(2*tau*snr_linear(i)));
+    BER_tao(i) = qfunc(sqrt(2*0.9*snr_linear(i)));
     fprintf("Received message is %s at SNR %s dB\n",sprintf('%d ',a_hat),sprintf('%d',snr_dB(i)));
 end
 figure(1)
-semilogy(snr_dB,BER_AWGN,'');
+semilogy(snr_dB,BER_AWGN,'k');
+hold on
+semilogy(snr_dB,BER_FTN,'r');
+semilogy(snr_dB,BER_tao,'m');
 grid on
-title('')
+hold off
+legend('Zero ISI - τ = 1','Proposed PDA: τ = 0.8','Proposed PDA: τ = 0.9');
 return
-an = 1*(-1+2*randi([0,1],1,Na))
-x = G*an' + Noise;
-%%need Pa(k),
-G_k=[];
-Rn = eye(Na);
-D_k = zeros(1,length(Na));
-
-iter=1;
-f_ind=1:Na;
-% f_ind=3;
-
-for i=1:iter
-    u_idx = f_ind;
-    [D_k,~,~,~] = compute_Dk(G,Pa,f_ind,Rn);
-    while ~isempty(u_idx)
-        [~,k_m] = max(D_k);
-        [~,mew_k,C_k,g_k]=compute_Dk(G,Pa,u_idx(k_m),Rn);
-        Pa(u_idx(k_m)) = 1/(1+exp(-2*(x-mew_k)' * inv(C_k) * g_k));%%U_IDX CHANGES BUT K_M DOES NOT CHANGE
-        u_idx(k_m) = [];
-        if isempty(u_idx)
-            break
-        end
-        [D_k,~,~,~] = compute_Dk(G,Pa,u_idx,Rn);
-        % [~,~,~,~,expected_ak] = compute_Dk(G,Pa,u_idx,Rn);
-
-    end
-
-end
-
-a_hat =sign(-0.5+Pa);
-fprintf("Received message is %s\n",sprintf('%d ',a_hat));
-% disp(Noise)
-
-
-% mew_k = G_k     
-return
-
-
-%%Pa_k = 1/(1+exp[-2((y-mew_k)')inv(C_k) g_k])
-%%y = Ga+n
-
-% N0 = Eb * 10^(-SNRdB/10); % PSD as a function of bit energy and SNR
-
 
 function [D_k,mew_k,C_k,g_k] = compute_Dk(G,Pa,f_ind,Rn)
     for k =1:length(f_ind)
